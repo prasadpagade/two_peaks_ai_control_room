@@ -1,0 +1,8 @@
+streamlit
+gradio
+openai
+chromadb
+pandas
+python-dotenv
+langchain
+requests

@@ -1,0 +1,21 @@
+{
+  "name": "TwoPeaks_Finance_Agent",
+  "nodes": [
+    {
+      "type": "cron",
+      "parameters": {"triggerTimes": ["09:00"], "timezone": "America/Denver"}
+    },
+    {
+      "type": "googleSheets",
+      "parameters": {"operation": "read", "sheet": "Finance_Performance_Raw"}
+    },
+    {
+      "type": "httpRequest",
+      "parameters": {"url": "http://localhost:8501/finance_summary"}
+    },
+    {
+      "type": "gmail",
+      "parameters": {"operation": "send", "subject": "Two Peaks Daily Finance Digest"}
+    }
+  ]
+}
