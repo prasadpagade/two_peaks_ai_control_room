@@ -3,6 +3,29 @@
 An autonomous AI operations hub for **Two Peaks Chai Co.**  
 Built with **Streamlit**, **Gradio**, **OpenAI**, and **n8n**.
 
+
+╔════════════════════════════════════════════════════════════════╗
+║                    TWO PEAKS AI CONTROL ROOM                    ║
+║                                                                ║
+║  ┌───────────────┐    ┌────────────┐     ┌─────────────┐       ║
+║  │ Customer      │    │ Marketing  │     │ Finance     │       ║
+║  │ Insights      │───▶│ Agent      │────▶│ Agent       │────┐  ║
+║  │ Agent         │◀───│ (HITL)     │◀────│ (Guardrails)│◀──┘  ║
+║  └───────────────┘    └────────────┘     └─────────────┘       ║
+║         │                        │                 │            ║
+║         ▼                        ▼                 ▼            ║
+║  ┌──────────────────────────────────────────────────────────┐  ║
+║  │          DECISION FEED + POLICY / EVENT BUS              │  ║
+║  │  (ChromaDB + JSONL logs + Policy/Compliance checks)      │  ║
+║  └──────────────────────────────────────────────────────────┘  ║
+║         │                        │                 │            ║
+║         ▼                        ▼                 ▼            ║
+║  ┌───────────────┐    ┌──────────────┐   ┌─────────────────┐   ║
+║  │ Support Agent │    │ n8n Webhooks │   │ Google Sheets / │   ║
+║  │  (RAG + FAQs) │    │ + Gmail / SMS│   │ Shopify / Drive │   ║
+║  └───────────────┘    └──────────────┘   └─────────────────┘   ║
+╚════════════════════════════════════════════════════════════════╝
+
 ## Setup
 python -m venv .venv  
 source .venv/bin/activate  
