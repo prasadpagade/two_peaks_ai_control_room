@@ -1,78 +1,123 @@
-# dashboard/tabs/insights_tab.py
+# --- Chai Theme ---
+CHAI_CREAM = "#f8f5ed"
+CHAI_OLIVE = "#5A7D42"
+CHAI_GOLD  = "#b99746"
+CHAI_DARK  = "#46351d"
+
+import re
 import streamlit as st
-import pandas as pd
-import gspread
-from google.oauth2.service_account import Credentials
 
-# Optional imports for charting
-import matplotlib.pyplot as plt
+# Data + AI
+from insights_agent.segment_customers import load_customer_data, segment_customers
+from insights_agent.summarize_insights import generate_insight_summary, load_segment_data
 
-# -----------------------------------
-# GOOGLE SHEETS SETUP (with graceful fallback)
-# -----------------------------------
-def load_sheet_data():
-    try:
-        # Expected: service account JSON stored locally or via environment variable
-        scopes = ["https://www.googleapis.com/auth/spreadsheets.readonly"]
-        creds = Credentials.from_service_account_file("google_service_account.json", scopes=scopes)
-        gc = gspread.authorize(creds)
+# Visuals + Console (all names match visualizer.py)
+from insights_agent.visualizer import (
+    generate_revenue_plot,
+    generate_segment_overview,
+    render_campaign_console,
+    render_segment_modal,
+    merge_segments_extra_fields,
+    segment_chart_interactions,
+    render_kpi_widgets,
+)
 
-        # Example: read data from your main sheet
-        sh = gc.open("TwoPeaks_Data")
-        worksheet = sh.worksheet("Insights")
-        df = pd.DataFrame(worksheet.get_all_records())
-        return df
+# ---------------- Helpers ----------------
+def _clean_and_highlight_olive(text: str) -> str:
+    """Strip stray HTML tags and highlight numbers/$/% in olive."""
+    if not text:
+        return ""
+    # remove broken/embedded spans/divs
+    text = re.sub(r"</?(span|div)[^>]*>", "", text)
+    # highlight numbers, $, %
+    def repl(m):
+        return f"<b style='color:{CHAI_OLIVE}'>{m.group(0)}</b>"
+    return re.sub(r"(\$?\d[\d,]*(\.\d+)?%?)", repl, text)
 
-    except Exception as e:
-        st.warning("⚠️ Could not connect to Google Sheets — using sample data instead.")
-        df = pd.DataFrame({
-            "Month": ["Jan", "Feb", "Mar", "Apr"],
-            "Revenue": [12000, 14500, 17000, 16500],
-            "Orders": [240, 280, 320, 300],
-            "Repeat_Customers": [50, 62, 71, 69],
-        })
-        return df
+def _key_takeaways(seg_df):
+    if seg_df is None or seg_df.empty:
+        return []
+    total = len(seg_df)
+    loyal = int((seg_df["segment"] == "Loyalist").sum()) if "segment" in seg_df else 0
+    hvn   = int((seg_df["segment"] == "High-Value Newcomer").sum()) if "segment" in seg_df else 0
+    badges = [f"🧑‍🤝‍🧑 {total} customers profiled"]
+    if loyal: badges.append(f"💚 {loyal} Loyalists")
+    if hvn:   badges.append(f"🛒 {hvn} High-Value Newcomers")
+    return badges
 
-
-# -----------------------------------
-# INSIGHTS TAB RENDER
-# -----------------------------------
+# ---------------- Main Tab ----------------
 def render_insights_tab():
-    st.header("📊 Customer Insights Agent")
-    st.caption("View performance trends, returning customers, and key growth insights.")
+    st.header("☕ Customer Intelligence Agent")
+    st.caption("Your friendly self-learning chai agent, always brewing up smart insights and growth ideas for your shop.")
 
-    df = load_sheet_data()
+    # Load base orders + derive segments
+    df = load_customer_data()
+    if df is None or df.empty:
+        st.warning("⚠️ No customer data found — check your Google Sheet or the fallback.")
+        return
 
-    # --- Metric Cards ---
-    col1, col2, col3, col4 = st.columns(4)
-    with col1:
-        st.markdown(f"<div class='metric-card'><h3>Total Revenue</h3><span>${df['Revenue'].sum():,.0f}</span></div>", unsafe_allow_html=True)
-    with col2:
-        st.markdown(f"<div class='metric-card'><h3>Total Orders</h3><span>{df['Orders'].sum()}</span></div>", unsafe_allow_html=True)
-    with col3:
-        st.markdown(f"<div class='metric-card'><h3>Avg Revenue / Order</h3><span>${df['Revenue'].sum() / df['Orders'].sum():.2f}</span></div>", unsafe_allow_html=True)
-    with col4:
-        repeat_rate = (df['Repeat_Customers'].sum() / df['Orders'].sum()) * 100
-        st.markdown(f"<div class='metric-card'><h3>Repeat Customer %</h3><span>{repeat_rate:.1f}%</span></div>", unsafe_allow_html=True)
+    seg = segment_customers(df)
 
-    st.markdown("<hr>", unsafe_allow_html=True)
+    # Merge optional extras (CLV / Notes / Tags) from Customer_Segments sheet
+    try:
+        extras = load_segment_data()  # may be empty
+        seg = merge_segments_extra_fields(seg, extras)
+    except Exception:
+        pass
 
-    # --- Chart Section ---
-    st.subheader("📈 Monthly Revenue Trend")
+    # ===== Row 1: Metrics (left) | Insights (right) =====
+    left, right = st.columns([1, 1], gap="large")
 
-    fig, ax = plt.subplots(figsize=(8, 4))
-    ax.plot(df["Month"], df["Revenue"], marker="o", color="#b99746", linewidth=2)
-    ax.set_facecolor("#f6f3eb")
-    ax.set_xlabel("Month")
-    ax.set_ylabel("Revenue ($)")
-    ax.set_title("Revenue Growth", fontweight="bold", color="#2e4a26")
-    ax.grid(alpha=0.3)
-    st.pyplot(fig)
+    with left:
+        st.subheader("📊 Customer Metrics Highlights")
+        # KPI widgets only
+        render_kpi_widgets(df, seg, olive=CHAI_OLIVE, gold=CHAI_GOLD, cream=CHAI_CREAM)
+        st.caption("Key customer insights at a glance")
 
-    st.markdown("<hr>", unsafe_allow_html=True)
+    with right:
+        st.subheader("🧠 Insights & Recommendations")
+        badges = _key_takeaways(seg)
+        if badges:
+            st.markdown(
+                "<div style='display:flex;flex-wrap:wrap;gap:8px'>"
+                + "".join(
+                    [f"<span style='background:{CHAI_CREAM};border:1px solid {CHAI_GOLD};color:{CHAI_OLIVE};padding:6px 10px;border-radius:12px'>{b}</span>"
+                     for b in badges]
+                )
+                + "</div>",
+                unsafe_allow_html=True,
+            )
+        try:
+            report = generate_insight_summary(seg)
+            report = _clean_and_highlight_olive(report)
+            st.markdown(f"<div style='line-height:1.6;color:{CHAI_DARK}'>{report}</div>", unsafe_allow_html=True)
+        except Exception as e:
+            st.error(f"❌ Error generating insight summary: {e}")
 
-    # --- Table View ---
-    st.subheader("📋 Detailed Data")
-    st.dataframe(df, use_container_width=True, hide_index=True)
+    st.markdown("---")
 
-    st.markdown("<br><small>💡 Tip: Connect your Google Sheet ‘TwoPeaks_Data → Insights’ to auto-sync these metrics.</small>", unsafe_allow_html=True)
+    # ===== Row 2: Segment Control (left) | Segment Details (right) =====
+    s_left, s_right = st.columns([1, 1], gap="large")
+
+    with s_left:
+        st.subheader("📦 Segment Control Room")
+        try:
+            seg_fig = generate_segment_overview(seg)  # olive styling inside
+            selected_segment = segment_chart_interactions(seg_fig)  # click/selector
+            st.plotly_chart(seg_fig, use_container_width=True)
+        except Exception as e:
+            selected_segment = None
+            st.error(f"❌ Error rendering segment chart: {e}")
+
+    with s_right:
+        # compact side panel (table/cards) instead of full-screen modal
+        render_segment_sidepanel(seg, selected_segment, olive=CHAI_OLIVE, gold=CHAI_GOLD, cream=CHAI_CREAM, dark=CHAI_DARK)
+
+    st.markdown("---")
+
+    # ===== Row 3: Campaign Console =====
+    st.subheader("🎯 Campaign Console")
+    try:
+        render_campaign_console(rotation_seconds=3, olive=CHAI_OLIVE, gold=CHAI_GOLD, cream=CHAI_CREAM)
+    except Exception as e:
+        st.error(f"❌ Error rendering campaign console: {e}")

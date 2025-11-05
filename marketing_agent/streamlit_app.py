@@ -49,37 +49,27 @@ with tab1:
         )
 
 # ---------------------------- TAB 2 ----------------------------
+# ---------------------------- TAB 2 ----------------------------
 with tab2:
     st.subheader("Generated Outreach Templates")
-    if templates_df.empty:
-        st.info("No templates yet. Run template_generator.py.")
+
+    queued_df = templates_df[templates_df["status"].str.upper() == "QUEUED"]
+
+    if queued_df.empty:
+        st.info("No queued templates. Run scoring or wait for n8n content generation.")
     else:
-        selected = st.selectbox(
-            "Select a template to review:",
-            options=templates_df.index,
-            format_func=lambda i: f"@{templates_df.loc[i,'username']} ({templates_df.loc[i,'channel']})"
-        )
+        for idx, row in queued_df.iterrows():
+            st.markdown(f"### @{row['username']} ({row['channel']})")
+            subject = st.text_input("Subject", row["subject"] or "", key=f"subj_{idx}")
+            message = st.text_area("Message", row["message"] or "", height=160, key=f"msg_{idx}")
 
-        row = templates_df.loc[selected]
-        st.write(f"**User:** @{row['username']} | **Channel:** {row['channel']}")
-        subject = st.text_input("Subject", row["subject"])
-        message = st.text_area("Message", row["message"], height=180)
-        approved = st.checkbox("Approve for Send")
+            if st.button(f"✅ Approve & Send to {row['username']}", key=f"approve_{idx}"):
+                tpl_ws.update_cell(idx + 2, templates_df.columns.get_loc("subject") + 1, subject)
+                tpl_ws.update_cell(idx + 2, templates_df.columns.get_loc("message") + 1, message)
+                tpl_ws.update_cell(idx + 2, templates_df.columns.get_loc("status") + 1, "APPROVED")
+                st.success(f"Approved ✅ – Workflow will auto-send via Gmail soon.")
 
-        if approved:
-            tpl_ws.update_cell(selected + 2, templates_df.columns.get_loc("subject") + 1, subject)
-            tpl_ws.update_cell(selected + 2, templates_df.columns.get_loc("message") + 1, message)
-
-            # --- SAFE FIX: make sure we have enough columns for approval status ---
-            needed_cols = 10  # add buffer columns if needed
-            if tpl_ws.col_count < needed_cols:
-                tpl_ws.add_cols(needed_cols - tpl_ws.col_count)
-
-            # Write "APPROVED" to status column
-            tpl_ws.update_cell(selected + 2, templates_df.columns.get_loc("status") + 1, "APPROVED")
-
-            
-            st.success("Template approved ✅")
+            st.divider()
 
 st.divider()
 st.caption("Use n8n to deliver approved templates → Instagram DM / Email")

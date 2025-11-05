@@ -3,6 +3,7 @@ import random
 from datetime import datetime
 from zoneinfo import ZoneInfo
 import gspread
+import os, requests, time
 
 # --- Sheets auth (service_account.json must be in project root) ---
 gc = gspread.service_account(filename="service_account.json")
@@ -35,6 +36,40 @@ comment_pool = [
 base_handles = ["chai_lover", "tea_rider", "zenleaf", "mountainbrew", "aromabliss",
                 "goldenglow", "masalamaven", "rosedrifter", "saffronseeker", "wellnessbrew"]
 
+# --- Simulation: fake API sources & fetch progress (for UX/demo only) ---
+PLATFORMS = [
+    "instagram",
+    "facebook",
+    "x (twitter)",
+    "tiktok",
+    "linkedin",
+]
+
+def simulate_fetch(platform=None, n=5):
+    """Prints a friendly simulated fetch progress so callers (and Streamlit) see
+    a believable API flow without actually calling external services.
+    This output is printed to stdout and will be captured by the parent app.
+    """
+    if platform is None:
+        platform = random.choice(PLATFORMS)
+
+    print(f"📡 Simulating fetch from {platform} engagement API...")
+    time.sleep(0.6)
+    print("🔒 Authenticating (simulated)...")
+    time.sleep(0.4)
+    print("✅ Auth OK — requesting recent comments and likes")
+    time.sleep(0.6)
+
+    # Simulate pagination / streaming fetch
+    fetched = 0
+    for i in range(n):
+        chunk = random.randint(1, 3)
+        fetched += chunk
+        print(f"⬇️  Received {chunk} new engagement rows (total {fetched})")
+        time.sleep(0.35)
+
+    print(f"✨ Finished simulated fetch from {platform}: {fetched} items ready to insert into sheet.")
+
 def unique_username():
     # Try base+random until unique
     for _ in range(1000):
@@ -66,5 +101,29 @@ def add_rows(n=5):
     for r in rows:
         print("✅ Added:", r)
 
+#Optionally trigger n8n after new data
+# ============================================================
+# 🚀 Simulated API webhook (disabled real n8n trigger)
+# ============================================================
+WEBHOOK_URL = os.getenv("N8N_MARKETING_URL", "").strip()
+
 if __name__ == "__main__":
+    print("📡 Simulating cross-platform engagement sync…")
+    time.sleep(0.8)
+    print("🔒 Authenticating with Instagram (simulated)...")
+    time.sleep(0.6)
+    print("🔒 Authenticating with LinkedIn (simulated)...")
+    time.sleep(0.6)
+    print("✅ Auth OK — fetching engagement data streams...")
+    time.sleep(0.6)
+
+    # Run the actual row creation logic
     add_rows(n=5)
+
+    # Simulate “posting to webhook” logs (no real request sent)
+    print("🌐 Posting engagement payload to n8n webhook (simulated)...")
+    time.sleep(0.8)
+    print("📦 Sending 5 engagement objects to processing pipeline...")
+    time.sleep(0.6)
+    print("✅ [Mock] Webhook accepted 5 events successfully.")
+    print("✨ Simulation complete — engagement data inserted locally (no real webhook call).")
