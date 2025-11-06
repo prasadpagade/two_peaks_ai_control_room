@@ -304,24 +304,8 @@ elif choice == "💬 Finance Chat":
     finance_chat_interface(df)
 
 elif choice == "💬 Support Agent":
-    st.header("💬 Support Agent (RAG-Powered Concierge)")
-    st.write("Your AI assistant trained on product FAQs, brewing rituals, and order support.")
-    gradio_url = "http://127.0.0.1:7860"
-    st.markdown(
-        f"""
-        <div style="border: 2px solid #b99746; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 8px rgba(0,0,0,0.15);">
-            <iframe 
-                src="{gradio_url}" 
-                width="100%" 
-                height="750" 
-                style="border: none;"
-                allow="microphone; clipboard-write;"
-            ></iframe>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-    st.info("If the assistant doesn’t appear, make sure `rag_support_bot.py` is running in another terminal window.")
+    from tabs import support_tab
+    support_tab.show()
 
 # -----------------------------------
 # FOOTER

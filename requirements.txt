@@ -6,21 +6,29 @@ gradio>=4.43.0
 openai>=1.13.3
 langchain>=0.2.14
 chromadb>=0.5.3
+faiss-cpu>=1.8.0     # For persistent vector index storage (Finance Agent)
+tiktoken>=0.7.0      # Tokenization for LLM efficiency
 
 # === Data Handling ===
 pandas>=2.2.2
 python-dotenv>=1.0.1
 requests>=2.32.3
+numpy>=1.26.4
+scikit-learn>=1.5.2  # For cosine similarity (used in finance_chat)
 
 # === Google Sheets Integration ===
 gspread>=6.2.1
 google-auth>=2.34.0
 google-auth-oauthlib>=1.2.0
 
+# === Visualization & Charts ===
+matplotlib>=3.9.0
+plotly>=5.24.1
+
 # === Utilities ===
 tqdm>=4.67.1
 typing-extensions>=4.12.2
 
-# === Deployment (optional but safe) ===
+# === Deployment (optional but recommended) ===
 uvicorn>=0.30.0
-matplotlib>=3.9.0
+fastapi>=0.115.0
