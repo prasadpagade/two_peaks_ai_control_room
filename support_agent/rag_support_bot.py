@@ -1,13 +1,14 @@
-import os
-import glob
-import uuid
-import gradio as gr
+# support_agent/rag_support_bot.py
+import os, json, uuid, glob
 import chromadb
+import gradio as gr
 from openai import OpenAI
 from dotenv import load_dotenv
+from datetime import datetime
+from support_shared import load_docs, query_context
 
 # ---------------------------------------------------------
-# LOAD ENV + INIT CLIENTS
+# Setup
 # ---------------------------------------------------------
 load_dotenv()
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
@@ -15,45 +16,15 @@ chroma_client = chromadb.Client()
 collection = chroma_client.get_or_create_collection("two_peaks_faqs")
 
 # ---------------------------------------------------------
-# LOAD LOCAL FAQ DOCS
+# Load docs once
 # ---------------------------------------------------------
-def load_docs():
-    docs = []
-    for path in glob.glob("support_agent/*.md"):
-        with open(path, "r", encoding="utf-8") as f:
-            docs.append({
-                "id": str(uuid.uuid4()),
-                "text": f.read(),
-                "source": os.path.basename(path)
-            })
-    return docs
-
 docs = load_docs()
-print(f"📄 Loaded {len(docs)} FAQ files:")
+print(f"📄 Loaded {len(docs)} FAQ files.")
 for d in docs:
     print("  -", d["source"])
 
 # ---------------------------------------------------------
-# STORE EMBEDDINGS INTO CHROMA
-# ---------------------------------------------------------
-for doc in docs:
-    try:
-        if not collection.get(ids=[doc["id"]])["ids"]:
-            emb = client.embeddings.create(
-                model="text-embedding-3-small",
-                input=doc["text"]
-            ).data[0].embedding
-            collection.add(
-                ids=[doc["id"]],
-                embeddings=[emb],
-                documents=[doc["text"]],
-                metadatas=[{"source": doc["source"]}]
-            )
-    except Exception as e:
-        print(f"❌ Embedding error for {doc['source']}: {e}")
-
-# ---------------------------------------------------------
-# SYSTEM PROMPT
+# System prompt
 # ---------------------------------------------------------
 SYSTEM_PROMPT = """You are the official Two Peaks Chai Co. support assistant.
 Your tone is warm, friendly, and aligned with the brand’s story — blending Indian heritage and modern wellness.
@@ -63,30 +34,22 @@ Always keep your tone human, empathetic, and concise.
 """
 
 # ---------------------------------------------------------
-# RESPONSE GENERATOR
+# Main chat handler
 # ---------------------------------------------------------
 def generate_answer(message: str, history: list):
     query = message
     print(f"🗣️ Received query: {query}")
 
-    # Retrieve relevant context
     try:
-        q_emb = client.embeddings.create(
-            model="text-embedding-3-small",
-            input=query
-        ).data[0].embedding
-
-        results = collection.query(query_embeddings=[q_emb], n_results=3)
-        context = "\n\n".join(results["documents"][0]) if results["documents"] else ""
+        context = query_context(query)
     except Exception as e:
         print(f"❌ Retrieval error: {e}")
-        return "⚠️ Sorry, I had trouble retrieving the right answer."
+        context = ""
 
     # Detect first-time buyers
     if any(w in query.lower() for w in ["first time", "new customer", "recommend", "try"]):
         context += "\n\n[Suggest the Founder's Ritual Sampler Box — perfect for first-time buyers!]"
 
-    # Generate chat completion
     try:
         response = client.chat.completions.create(
             model="gpt-4o-mini",
@@ -97,18 +60,27 @@ def generate_answer(message: str, history: list):
             ]
         )
         text = response.choices[0].message.content.strip()
-        text = text.replace("_", "").replace("*", "").replace("`", "")
-        return text
-
     except Exception as e:
-        import traceback
-        print("🔥 Chat completion error:")
-        traceback.print_exc()
-        return f"⚠️ OpenAI API error: {e}"
+        print(f"⚠️ OpenAI error: {e}")
+        return "⚠️ Sorry, something went wrong."
 
-# ---------------------------------------------------------
-# GRADIO CHAT INTERFACE
-# ---------------------------------------------------------
+    # Log ticket
+    ticket_path = os.path.join(os.path.dirname(__file__), "support_tickets.json")
+    now = datetime.utcnow().isoformat()
+    new_ticket = {"timestamp": now, "user_query": query, "assistant_response": text}
+    try:
+        tickets = []
+        if os.path.exists(ticket_path):
+            with open(ticket_path, "r", encoding="utf-8") as f:
+                tickets = json.load(f)
+        tickets.append(new_ticket)
+        with open(ticket_path, "w", encoding="utf-8") as f:
+            json.dump(tickets, f, indent=2)
+    except Exception as e:
+        print(f"❌ Ticket log error: {e}")
+
+    return text
+
 def welcome_message():
     return (
         "🌿 **Welcome to Two Peaks Chai Co. Support!**\n\n"
@@ -116,17 +88,7 @@ def welcome_message():
         "If you’re new here, I can help you pick your perfect chai ☕."
     )
 
-# ✅ Compatible theme definition (Gradio ≥ 4)
-theme = gr.themes.Soft(
-    primary_hue="orange",
-    neutral_hue="gray"
-).set(
-    body_background_fill="#1c1b18",
-    button_primary_background_fill="#b99746",
-    button_primary_background_fill_hover="#e7c66b",
-    button_primary_text_color="#1c1b18",
-    block_title_text_color="#b99746",
-)
+theme = gr.themes.Soft(primary_hue="amber", neutral_hue="stone")
 
 demo = gr.ChatInterface(
     fn=generate_answer,
@@ -142,8 +104,5 @@ demo = gr.ChatInterface(
     theme=theme
 )
 
-# ---------------------------------------------------------
-# LAUNCH APP
-# ---------------------------------------------------------
 if __name__ == "__main__":
     demo.launch(server_name="0.0.0.0", server_port=7860)

@@ -1,78 +1,116 @@
-# dashboard/tabs/insights_tab.py
+"""
+Two Peaks Chai Co. — Customer Intelligence Agent (Final Polished Version)
+Autonomously analyzes customer patterns, generates insights, and launches campaigns.
+"""
+
+import time
+import random
 import streamlit as st
-import pandas as pd
-import gspread
-from google.oauth2.service_account import Credentials
+from insights_agent.visualizer import (
+    render_kpi_summary,
+    render_segment_details,
+    render_insights_section,
+    render_campaign_console,
+)
 
-# Optional imports for charting
-import matplotlib.pyplot as plt
-
-# -----------------------------------
-# GOOGLE SHEETS SETUP (with graceful fallback)
-# -----------------------------------
-def load_sheet_data():
-    try:
-        # Expected: service account JSON stored locally or via environment variable
-        scopes = ["https://www.googleapis.com/auth/spreadsheets.readonly"]
-        creds = Credentials.from_service_account_file("google_service_account.json", scopes=scopes)
-        gc = gspread.authorize(creds)
-
-        # Example: read data from your main sheet
-        sh = gc.open("TwoPeaks_Data")
-        worksheet = sh.worksheet("Insights")
-        df = pd.DataFrame(worksheet.get_all_records())
-        return df
-
-    except Exception as e:
-        st.warning("⚠️ Could not connect to Google Sheets — using sample data instead.")
-        df = pd.DataFrame({
-            "Month": ["Jan", "Feb", "Mar", "Apr"],
-            "Revenue": [12000, 14500, 17000, 16500],
-            "Orders": [240, 280, 320, 300],
-            "Repeat_Customers": [50, 62, 71, 69],
-        })
-        return df
+# --- Theme ---
+CHAI_CREAM = "#f8f5ed"
+CHAI_GOLD  = "#b99746"
+CHAI_OLIVE = "#5A7D42"
+CHAI_DARK  = "#1a1a1a"
 
 
-# -----------------------------------
-# INSIGHTS TAB RENDER
-# -----------------------------------
-def render_insights_tab():
-    st.header("📊 Customer Insights Agent")
-    st.caption("View performance trends, returning customers, and key growth insights.")
+# ----------------------- Heartbeat Indicator -----------------------
+# ----------------------- Heartbeat Indicator -----------------------
+def render_agent_heartbeat():
+    """Simulates AI agent live system status with soft brand styling"""
+    if "ai_status" not in st.session_state:
+        st.session_state.ai_status = "Active"
 
-    df = load_sheet_data()
-
-    # --- Metric Cards ---
-    col1, col2, col3, col4 = st.columns(4)
+    col1, col2 = st.columns([6, 1])
     with col1:
-        st.markdown(f"<div class='metric-card'><h3>Total Revenue</h3><span>${df['Revenue'].sum():,.0f}</span></div>", unsafe_allow_html=True)
+        st.markdown("### 🤖 AI System Status")
+
     with col2:
-        st.markdown(f"<div class='metric-card'><h3>Total Orders</h3><span>{df['Orders'].sum()}</span></div>", unsafe_allow_html=True)
-    with col3:
-        st.markdown(f"<div class='metric-card'><h3>Avg Revenue / Order</h3><span>${df['Revenue'].sum() / df['Orders'].sum():.2f}</span></div>", unsafe_allow_html=True)
-    with col4:
-        repeat_rate = (df['Repeat_Customers'].sum() / df['Orders'].sum()) * 100
-        st.markdown(f"<div class='metric-card'><h3>Repeat Customer %</h3><span>{repeat_rate:.1f}%</span></div>", unsafe_allow_html=True)
+        if st.button("🔁 Refresh Insights", use_container_width=True):
+            st.session_state.ai_status = random.choice(["Active", "Analyzing...", "Paused"])
+            st.toast("🔄 Agent rechecking customer data streams...")
 
-    st.markdown("<hr>", unsafe_allow_html=True)
+    # --- Status mapping ---
+    status = st.session_state.ai_status
+    if status == "Active":
+        emoji, color, bg = "🟢", CHAI_OLIVE, "#e6f4ea"
+    elif status == "Analyzing...":
+        emoji, color, bg = "🟡", "#d4a017", "#fff8e1"
+    else:  # Paused
+        emoji, color, bg = "⏸️", CHAI_GOLD, "#fcf7e6"
 
-    # --- Chart Section ---
-    st.subheader("📈 Monthly Revenue Trend")
+    # --- Render status pill ---
+    st.markdown(
+        f"""
+        <div style="
+            display:flex;align-items:center;gap:8px;
+            background:{bg};
+            border:1px solid {CHAI_GOLD};
+            border-radius:10px;
+            padding:6px 14px;
+            width:fit-content;
+            margin-top:-10px;
+            box-shadow:0 1px 4px rgba(0,0,0,0.05);
+        ">
+            <span style="font-size:1.1em">{emoji}</span>
+            <b style="color:{color};font-size:1em">{status}</b>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
-    fig, ax = plt.subplots(figsize=(8, 4))
-    ax.plot(df["Month"], df["Revenue"], marker="o", color="#b99746", linewidth=2)
-    ax.set_facecolor("#f6f3eb")
-    ax.set_xlabel("Month")
-    ax.set_ylabel("Revenue ($)")
-    ax.set_title("Revenue Growth", fontweight="bold", color="#2e4a26")
-    ax.grid(alpha=0.3)
-    st.pyplot(fig)
+    # --- Auto pulse every 10s (safe rerun) ---
+    if "last_pulse" not in st.session_state:
+        st.session_state.last_pulse = time.time()
+    elif time.time() - st.session_state.last_pulse > 10:
+        st.session_state.ai_status = random.choice(["Active", "Analyzing..."])
+        st.session_state.last_pulse = time.time()
+        try:
+            st.rerun()
+        except AttributeError:
+            pass  # For older Streamlit builds
 
-    st.markdown("<hr>", unsafe_allow_html=True)
 
-    # --- Table View ---
-    st.subheader("📋 Detailed Data")
-    st.dataframe(df, use_container_width=True, hide_index=True)
+# ----------------------- Main Page -----------------------
+def render_insights_tab():
+    """Unified AI Control Tab"""
+    st.header("☕ Customer Intelligence Agent")
+    st.caption(
+        "_Autonomously analyzing customer patterns, brewing insights, and launching campaigns — powered by the Customer Intelligence Agent._"
+    )
+    render_agent_heartbeat()
+    st.markdown("---")
 
-    st.markdown("<br><small>💡 Tip: Connect your Google Sheet ‘TwoPeaks_Data → Insights’ to auto-sync these metrics.</small>", unsafe_allow_html=True)
+    # KPI summary
+    render_kpi_summary()
+    st.markdown("")
+
+    # Segment + Insights + Campaign Console
+    render_segment_details()
+    st.markdown("")
+    render_insights_section()
+    st.markdown("")
+    render_campaign_console()
+
+    # Footer
+    st.markdown("---")
+    st.markdown(
+        f"""
+        <p style='text-align:center;color:{CHAI_DARK};margin-top:25px;font-size:0.9em;'>
+        © 2025 Two Peaks Chai Co. | AI Agents Operational 🟢 | Last Sync: Today 9:00 AM
+        </p>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+# ----------------------- Run Standalone -----------------------
+if __name__ == "__main__":
+    st.set_page_config(page_title="Two Peaks AI Control Room", layout="wide", page_icon="☕")
+    render_insights_tab()
