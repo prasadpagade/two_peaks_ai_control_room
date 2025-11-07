@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Two Peaks AI Control Room - ROI Calculator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .calculator-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 900px;
+            width: 100%;
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .input-section {
+            margin-bottom: 40px;
+        }
+
+        .input-group {
+            margin-bottom: 25px;
+        }
+
+        .input-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #333;
+            font-size: 1em;
+        }
+
+        .input-wrapper {
+            position: relative;
+        }
+
+        .input-wrapper input[type="range"] {
+            width: 100%;
+            height: 8px;
+            border-radius: 5px;
+            background: #e0e0e0;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .input-wrapper input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #667eea;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        .input-wrapper input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #667eea;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            border: none;
+        }
+
+        .value-display {
+            display: inline-block;
+            background: #f5f5f5;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-weight: 600;
+            color: #667eea;
+            margin-top: 8px;
+            font-size: 1.1em;
+        }
+
+        .results-section {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            border-radius: 15px;
+            padding: 30px;
+            margin-top: 30px;
+        }
+
+        .results-section h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+        }
+
+        .metric-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .metric-card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            transition: transform 0.2s;
+        }
+
+        .metric-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .metric-label {
+            font-size: 0.9em;
+            color: #666;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .metric-value {
+            font-size: 2em;
+            font-weight: 700;
+            color: #667eea;
+        }
+
+        .metric-subtext {
+            font-size: 0.85em;
+            color: #999;
+            margin-top: 5px;
+        }
+
+        .savings-breakdown {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            margin-top: 20px;
+        }
+
+        .savings-breakdown h3 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .breakdown-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .breakdown-item:last-child {
+            border-bottom: none;
+            font-weight: 700;
+            font-size: 1.2em;
+            color: #667eea;
+            padding-top: 15px;
+            margin-top: 10px;
+            border-top: 2px solid #667eea;
+        }
+
+        .breakdown-label {
+            color: #555;
+        }
+
+        .breakdown-value {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .cta-section {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 30px;
+            border-top: 2px dashed #ddd;
+        }
+
+        .cta-button {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 40px;
+            border-radius: 30px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 1.1em;
+            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .cta-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+
+        @media (max-width: 768px) {
+            .content {
+                padding: 20px;
+            }
+
+            .metric-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .header h1 {
+                font-size: 1.5em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="calculator-container">
+        <div class="header">
+            <h1>🎛️ AI Control Room ROI Calculator</h1>
+            <p>Calculate your potential savings with AI-powered GTM automation</p>
+        </div>
+
+        <div class="content">
+            <div class="input-section">
+                <h2 style="margin-bottom: 25px; color: #333;">Your Current GTM Team</h2>
+
+                <div class="input-group">
+                    <label for="numEmployees">Number of GTM Specialists</label>
+                    <div class="input-wrapper">
+                        <input type="range" id="numEmployees" min="1" max="20" value="4" step="1">
+                        <span class="value-display" id="numEmployeesValue">4 specialists</span>
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label for="avgSalary">Average Annual Salary per Specialist</label>
+                    <div class="input-wrapper">
+                        <input type="range" id="avgSalary" min="50000" max="200000" value="95000" step="5000">
+                        <span class="value-display" id="avgSalaryValue">$95,000</span>
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label for="weeklyHours">Hours Spent on Manual GTM Tasks (per week)</label>
+                    <div class="input-wrapper">
+                        <input type="range" id="weeklyHours" min="5" max="80" value="25" step="5">
+                        <span class="value-display" id="weeklyHoursValue">25 hours/week</span>
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label for="numCustomers">Number of Customers</label>
+                    <div class="input-wrapper">
+                        <input type="range" id="numCustomers" min="100" max="50000" value="2000" step="100">
+                        <span class="value-display" id="numCustomersValue">2,000</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="results-section">
+                <h2>💰 Your Potential Savings</h2>
+
+                <div class="metric-grid">
+                    <div class="metric-card">
+                        <div class="metric-label">Annual Savings</div>
+                        <div class="metric-value" id="annualSavings">$0</div>
+                        <div class="metric-subtext">vs. current manual process</div>
+                    </div>
+
+                    <div class="metric-card">
+                        <div class="metric-label">Monthly Savings</div>
+                        <div class="metric-value" id="monthlySavings">$0</div>
+                        <div class="metric-subtext">in labor costs</div>
+                    </div>
+
+                    <div class="metric-card">
+                        <div class="metric-label">Hours Saved</div>
+                        <div class="metric-value" id="hoursSaved">0</div>
+                        <div class="metric-subtext">per week</div>
+                    </div>
+
+                    <div class="metric-card">
+                        <div class="metric-label">ROI</div>
+                        <div class="metric-value" id="roiPercent">0%</div>
+                        <div class="metric-subtext">return on investment</div>
+                    </div>
+                </div>
+
+                <div class="savings-breakdown">
+                    <h3>💡 Cost Breakdown</h3>
+                    <div class="breakdown-item">
+                        <span class="breakdown-label">Current Annual Labor Cost</span>
+                        <span class="breakdown-value" id="currentCost">$0</span>
+                    </div>
+                    <div class="breakdown-item">
+                        <span class="breakdown-label">AI Control Room Annual Cost</span>
+                        <span class="breakdown-value" id="aiCost">$0</span>
+                    </div>
+                    <div class="breakdown-item">
+                        <span class="breakdown-label">Time Savings (94% automation)</span>
+                        <span class="breakdown-value" id="timeSavings">0 hrs/week</span>
+                    </div>
+                    <div class="breakdown-item">
+                        <span class="breakdown-label">✅ Net Annual Savings</span>
+                        <span class="breakdown-value" id="netSavings">$0</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="cta-section">
+                <p style="margin-bottom: 20px; color: #666; font-size: 1.1em;">
+                    Ready to automate your GTM operations?
+                </p>
+                <a href="https://github.com/prasadpagade/two_peaks_ai_control_room" class="cta-button" target="_blank">
+                    View on GitHub →
+                </a>
+                <p style="margin-top: 15px; color: #999; font-size: 0.9em;">
+                    Or <a href="mailto:prasad@twopeakschai.com" style="color: #667eea; text-decoration: none; font-weight: 600;">contact us</a> for a live demo
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Constants
+        const AUTOMATION_RATE = 0.94; // 94% of tasks automated
+        const BENEFITS_MULTIPLIER = 1.3; // 30% benefits on top of salary
+        const WEEKS_PER_YEAR = 52;
+
+        // AI Control Room costs (conservative estimate)
+        const BASE_AI_COST_MONTHLY = 50; // Infrastructure
+        const COST_PER_1K_CUSTOMERS_MONTHLY = 25; // API costs scale with volume
+
+        // Get DOM elements
+        const numEmployeesInput = document.getElementById('numEmployees');
+        const avgSalaryInput = document.getElementById('avgSalary');
+        const weeklyHoursInput = document.getElementById('weeklyHours');
+        const numCustomersInput = document.getElementById('numCustomers');
+
+        // Value displays
+        const numEmployeesValue = document.getElementById('numEmployeesValue');
+        const avgSalaryValue = document.getElementById('avgSalaryValue');
+        const weeklyHoursValue = document.getElementById('weeklyHoursValue');
+        const numCustomersValue = document.getElementById('numCustomersValue');
+
+        // Result displays
+        const annualSavings = document.getElementById('annualSavings');
+        const monthlySavings = document.getElementById('monthlySavings');
+        const hoursSaved = document.getElementById('hoursSaved');
+        const roiPercent = document.getElementById('roiPercent');
+        const currentCost = document.getElementById('currentCost');
+        const aiCost = document.getElementById('aiCost');
+        const timeSavings = document.getElementById('timeSavings');
+        const netSavings = document.getElementById('netSavings');
+
+        // Update display values
+        function updateDisplayValues() {
+            numEmployeesValue.textContent = `${numEmployeesInput.value} specialist${numEmployeesInput.value > 1 ? 's' : ''}`;
+            avgSalaryValue.textContent = `$${parseInt(avgSalaryInput.value).toLocaleString()}`;
+            weeklyHoursValue.textContent = `${weeklyHoursInput.value} hours/week`;
+            numCustomersValue.textContent = parseInt(numCustomersInput.value).toLocaleString();
+        }
+
+        // Calculate ROI
+        function calculateROI() {
+            const numEmployees = parseInt(numEmployeesInput.value);
+            const avgSalary = parseInt(avgSalaryInput.value);
+            const weeklyHours = parseInt(weeklyHoursInput.value);
+            const numCustomers = parseInt(numCustomersInput.value);
+
+            // Current costs
+            const totalSalary = numEmployees * avgSalary;
+            const totalWithBenefits = totalSalary * BENEFITS_MULTIPLIER;
+            const currentCostValue = totalWithBenefits;
+
+            // Time that could be saved
+            const hoursAutomated = weeklyHours * AUTOMATION_RATE;
+            const avgHourlyRate = avgSalary / (40 * WEEKS_PER_YEAR);
+            const laborSavingsPerWeek = hoursAutomated * avgHourlyRate * numEmployees;
+            const laborSavingsPerYear = laborSavingsPerWeek * WEEKS_PER_YEAR;
+
+            // AI Control Room costs
+            const customerBatches = Math.ceil(numCustomers / 1000);
+            const aiCostMonthly = BASE_AI_COST_MONTHLY + (customerBatches * COST_PER_1K_CUSTOMERS_MONTHLY);
+            const aiCostAnnual = aiCostMonthly * 12;
+
+            // Net savings
+            const netAnnualSavings = laborSavingsPerYear - aiCostAnnual;
+            const netMonthlySavings = netAnnualSavings / 12;
+
+            // ROI
+            const roi = ((netAnnualSavings / aiCostAnnual) * 100);
+
+            // Update displays
+            annualSavings.textContent = `$${Math.round(netAnnualSavings).toLocaleString()}`;
+            monthlySavings.textContent = `$${Math.round(netMonthlySavings).toLocaleString()}`;
+            hoursSaved.textContent = Math.round(hoursAutomated * numEmployees);
+            roiPercent.textContent = `${Math.round(roi).toLocaleString()}%`;
+
+            // Breakdown
+            currentCost.textContent = `$${Math.round(currentCostValue).toLocaleString()}`;
+            aiCost.textContent = `$${Math.round(aiCostAnnual).toLocaleString()}`;
+            timeSavings.textContent = `${Math.round(hoursAutomated * numEmployees)} hrs/week`;
+            netSavings.textContent = `$${Math.round(netAnnualSavings).toLocaleString()}`;
+        }
+
+        // Event listeners
+        numEmployeesInput.addEventListener('input', () => {
+            updateDisplayValues();
+            calculateROI();
+        });
+
+        avgSalaryInput.addEventListener('input', () => {
+            updateDisplayValues();
+            calculateROI();
+        });
+
+        weeklyHoursInput.addEventListener('input', () => {
+            updateDisplayValues();
+            calculateROI();
+        });
+
+        numCustomersInput.addEventListener('input', () => {
+            updateDisplayValues();
+            calculateROI();
+        });
+
+        // Initial calculation
+        updateDisplayValues();
+        calculateROI();
+    </script>
+</body>
+</html>
